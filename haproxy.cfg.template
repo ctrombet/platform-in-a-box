@@ -1,0 +1,66 @@
+global
+   log /dev/log local0 debug
+   maxconn 4096
+
+defaults
+
+  mode http
+  balance roundrobin
+  option redispatch
+  option forwardfor
+
+  timeout connect 5s
+  timeout queue 5s
+  timeout client 50s
+  timeout server 50s
+
+
+frontend platform_frontend
+
+  bind *:80
+
+  acl environment_jenkins path_beg /jenkins
+  use_backend backend_jenkins if environment_jenkins
+
+  acl environment_sonarqube path_beg /sonarqube
+  use_backend backend_sonarqube if environment_sonarqube
+
+  default_backend platform_backend
+
+  stats enable  # Enable stats page
+  stats hide-version  # Hide HAProxy version
+  stats realm Haproxy\ Statistics  # Title text for popup window
+  stats uri /haproxy_stats  # Stats URI
+  stats auth admin:admin
+
+
+  ##CONFS##
+
+backend backend_jenkins
+  balance source
+  option http-server-close
+  option forceclose
+  http-response  set-header Host http://localhost/jenkins
+
+  server server_jenkins localhost:8080 weight 1 maxconn 1024 check port 8080
+
+backend backend_sonarqube
+  balance source
+  option http-server-close
+  option forceclose
+  http-response  set-header Host http://localhost/sonarqube
+
+  server server_sonarqube localhost:9000 weight 1 maxconn 1024 check port 9000
+
+
+backend platform_backend
+
+  balance source
+  option http-server-close
+  option forceclose
+
+  errorfile 200 /usr/local/etc/haproxy/200.http
+  errorfile 503 /usr/local/etc/haproxy/200.http
+  errorfile 404 /usr/local/etc/haproxy/200.http
+
+

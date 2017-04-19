@@ -33,7 +33,7 @@ docker ps | grep jenkins
 
 if [[ $? -ne 0 ]];then
 	docker run -d -p 8080:8080 -p 50000:50000 --restart always --privileged -v /var/run/docker.sock:/var/run/docker.sock:rw \
-       -v $(which docker):/bin/docker jenkins
+       -v $(which docker):/bin/docker -e JENKINS_OPTS="--prefix=/jenkins" jenkins
 fi
 
 DOCKER_CONTAINER=$(docker ps | grep jenkins | awk '{print $1}')
@@ -59,6 +59,15 @@ docker ps | grep sonar
 if [[ $? -ne 0 ]];then
 	docker run -d -p 9000:9000 -p 9092:9092 sonarqube
 fi
-docker run -d --name sonarqube -p 9000:9000 -p 9092:9092 sonarqube
+
+# HAProxy
+
+if ! [[ -d /vagrant/haproxy ]];then
+mkdir /vagrant/haproxy
+fi
+
+echo "HAProxy frontend" > /vagrant/haproxy/200.http
+docker run --privileged -d --net=host -v /vagrant/haproxy:/usr/local/etc/haproxy/ -p 80:80 haproxy
+
 
 echo "Done"
